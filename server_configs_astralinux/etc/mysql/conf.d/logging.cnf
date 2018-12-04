@@ -1,0 +1,7 @@
+[mysqld_safe]
+log-error                       = /var/log/mysql/error.log
+
+[mysqld]
+log-error                       = /var/log/mysql/error.log
+#slow-query-log-file             = /var/log/mysql/slow.log
+
