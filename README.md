@@ -238,6 +238,51 @@ WantedBy=multi-user.target
 
 Проверяем ```nginx -V``` и ```service nginx status```
 
+<h3>Настройка memcached</h3>
+
+Устанавливаем 
+```
+apt-get install memcached
+```
+
+Заливаем правильный `/etc/memcached.conf` из конфигов
+
+Проверяем работу 
+```
+telnet localhost 11211
+stats settings
+quit
+```
+
+В битриксе настраиваем файлы (после внедрения битрикса)
+В файле ```/bitrix/php_interface/dbconn.php```
+
+```
+define("BX_CACHE_TYPE", "memcache");
+define("BX_CACHE_SID", $_SERVER["DOCUMENT_ROOT"]."#01");
+define("BX_MEMCACHE_HOST", "localhost");
+define("BX_MEMCACHE_PORT", "11211");
+```
+
+Создаем новый файл ```/bitrix/ файл .settings_extra.php```
+
+```
+<?php
+return array (
+  'cache' => array(
+     'value' => array (
+        'type' => 'memcache',
+        'memcache' => array(
+            'host' => 'localhost',
+            'port' => 11211'
+        ),
+        'sid' => $_SERVER["DOCUMENT_ROOT"]."#01"
+     ),
+  ),
+);
+```
+
+Проверяем корректность установки с помощью инструментов "Проверка сайта" и "Монитор производительности". 
 
 <h3>Прочее</h3>
 
