@@ -264,7 +264,7 @@ define("BX_MEMCACHE_HOST", "localhost");
 define("BX_MEMCACHE_PORT", "11211");
 ```
 
-Создаем новый файл ```/bitrix/ файл .settings_extra.php```
+Создаем новый файл ```/bitrix/.settings_extra.php```
 
 ```
 <?php
