@@ -2,7 +2,8 @@
 
 <h2>Подготовка</h2>
 
-```apt-get install ca-certificates
+```
+apt-get install ca-certificates
 apt-get install wget
 apt-get install curl
 apt-get install git
@@ -22,7 +23,8 @@ apt-get install git
 ```tar -zxf mariadb-10.3.11-linux-x86_64.tar.gz```
 
 Создаем пользователя, прокидываем симлинк
-```groupadd mysql
+```
+groupadd mysql
 useradd -g mysql mysql
 cd /usr/local
 tar -zxvpf /path-to/mariadb-VERSION-OS.tar.gz
@@ -34,7 +36,8 @@ cd mysql
 ```./scripts/mysql_install_db --user=mysql```
 
 После установки ставим права
-```chown -R root . 
+```
+chown -R root . 
 chown -R mysql data
 ```
 Добавляем в ```~/.bashrc ```
@@ -57,7 +60,8 @@ export PATH
 Устанавливаем конфиг my.cnf и папку mysql с конфигами из архива
 
 Создаем БД (пароль меняем):
-```mysql
+```
+mysql
 CREATE DATABASE `lks`;
 CREATE USER 'lks_user' IDENTIFIED BY '1J1QlFMMl9k';
 GRANT USAGE ON *.* TO 'lks_user'@'%' IDENTIFIED BY '1J1QlFMMl9k';
@@ -90,7 +94,8 @@ apt-get -y --no-install-recommends install catdoc
 ```
 
 Ставим права на логи
-```mkdir -p /var/log/php/
+```
+mkdir -p /var/log/php/
 touch /var/log/php/error.log
 chmod 775 /var/log/php/error.log
 chown bitrix:bitrix /var/log/php/error.log
@@ -137,7 +142,8 @@ chown bitrix:bitrix /var/log/msmtp/msmtp.log
 
 Управление сервисом:
 
-```systemctl status php7.0-fpm
+```
+systemctl status php7.0-fpm
 systemctl start php7.0-fpm
 systemctl stop php7.0-fpm
 systemctl restart php7.0-fpm
@@ -147,7 +153,8 @@ systemctl restart php7.0-fpm
 
 Полезные инструкции (для справки)
 
-```https://docs.nginx.com/nginx/admin-guide/installing-nginx/installing-nginx-open-source/
+```
+https://docs.nginx.com/nginx/admin-guide/installing-nginx/installing-nginx-open-source/
 https://dermanov.ru/exp/configure-push-and-pull-module-for-bitrix24/
 https://onlinebd.ru/blog/1s-bitriks-nginx-php-fpm-kompozit
 ```
@@ -157,7 +164,8 @@ https://onlinebd.ru/blog/1s-bitriks-nginx-php-fpm-kompozit
 ```apt-get -y install build-essential zlib1g-dev libpcre3 libpcre3-dev libbz2-dev libssl-dev tar unzip```
 
 Переходим в удобную папку, например, ```tmp``` и начинаем собирать nginx и библиотеки. Начинаем с PCRE:
-```wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.42.tar.gz --no-check-certificate
+```
+wget ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-8.42.tar.gz --no-check-certificate
 tar -zxf pcre-8.42.tar.gz
 cd pcre-8.42
 ./configure
@@ -166,7 +174,8 @@ sudo make install
 ```
 
 Теперь zlib
-```wget http://zlib.net/zlib-1.2.11.tar.gz --no-check-certificate
+```
+wget http://zlib.net/zlib-1.2.11.tar.gz --no-check-certificate
 tar -zxf zlib-1.2.11.tar.gz
 cd zlib-1.2.11
 ./configure
@@ -175,7 +184,8 @@ sudo make install
 ```
 
 OpenSSL:
-```wget http://www.openssl.org/source/openssl-1.0.2p.tar.gz --no-check-certificate
+```
+wget http://www.openssl.org/source/openssl-1.0.2p.tar.gz --no-check-certificate
 tar -zxf openssl-1.0.2p.tar.gz
 cd openssl-1.0.2p
 ./Configure darwin64-x86_64-cc --prefix=/usr
@@ -183,18 +193,21 @@ make
 sudo make install
 ```
 Модуль для чатов:
-```wget https://github.com/wandenberg/nginx-push-stream-module/archive/0.4.1.tar.gz --no-check-certificate
+```
+wget https://github.com/wandenberg/nginx-push-stream-module/archive/0.4.1.tar.gz --no-check-certificate
 tar -zxf 0.4.1.tar.gz
 ```
 
 Качаем nginx:
-```wget http://nginx.org/download/nginx-1.15.7.tar.gz --no-check-certificate
+```
+wget http://nginx.org/download/nginx-1.15.7.tar.gz --no-check-certificate
 tar -zxf nginx-1.15.7.tar.gz 
 ```
 
 Собираем и устанавливаем
 
-```./configure --sbin-path=/usr/local/nginx/nginx --conf-path=/usr/local/nginx/nginx.conf --pid-path=/usr/local/nginx/nginx.pid --add-module=../nginx-push-stream-module-0.4.1 --with-zlib=../zlib-1.2.11 --with-openssl=../openssl-1.0.2p --with-pcre=../pcre-8.42 --with-http_ssl_module --with-http_realip_module  --with-http_addition_module  --with-http_sub_module  --with-http_dav_module  --with-http_flv_module  --with-http_mp4_module  --with-http_gunzip_module  --with-http_gzip_static_module  --with-http_random_index_module  --with-http_secure_link_module  --with-http_stub_status_module  --with-http_auth_request_module  --with-http_v2_module  --with-mail  --with-mail_ssl_module  --with-file-aio  --with-ipv6 
+```
+./configure --sbin-path=/usr/local/nginx/nginx --conf-path=/usr/local/nginx/nginx.conf --pid-path=/usr/local/nginx/nginx.pid --add-module=../nginx-push-stream-module-0.4.1 --with-zlib=../zlib-1.2.11 --with-openssl=../openssl-1.0.2p --with-pcre=../pcre-8.42 --with-http_ssl_module --with-http_realip_module  --with-http_addition_module  --with-http_sub_module  --with-http_dav_module  --with-http_flv_module  --with-http_mp4_module  --with-http_gunzip_module  --with-http_gzip_static_module  --with-http_random_index_module  --with-http_secure_link_module  --with-http_stub_status_module  --with-http_auth_request_module  --with-http_v2_module  --with-mail  --with-mail_ssl_module  --with-file-aio  --with-ipv6 
 
 make
 make install
