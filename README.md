@@ -234,6 +234,10 @@ PrivateTmp=true
 WantedBy=multi-user.target
 ```
 
+Пробрасываем симлинк с ```/etc/nginx/nginx.conf``` в папку nginx в ```/usr/local/nginx```, старый конфиг оттуда удалить.
+
+Создать файлы логов ```/var/log/nginx/nginx_access.log``` и ```/var/log/nginx/nginx_error.log```, дать пользователя bitrix
+
 Запускаем ```service nginx start```
 
 Проверяем ```nginx -V``` и ```service nginx status```
