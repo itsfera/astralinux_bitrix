@@ -66,8 +66,9 @@ CREATE DATABASE `lks`;
 CREATE USER 'lks_user' IDENTIFIED BY '1J1QlFMMl9k';
 GRANT USAGE ON *.* TO 'lks_user'@'%' IDENTIFIED BY '1J1QlFMMl9k';
 GRANT ALL PRIVILEGES ON `lks`.* TO 'lks_user'@'%';
+GRANT USAGE ON *.* TO 'lks_user'@localhost IDENTIFIED BY '1J1QlFMMl9k';
+GRANT ALL PRIVILEGES ON `lks`.* TO 'lks_user'@localhost;
 FLUSH PRIVILEGES;
-SHOW GRANTS FOR 'lks_user'@'%';
 ```
 
 <h2>Установка PHP 7 и сервера PHP-FPM</h2>
