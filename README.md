@@ -188,7 +188,7 @@ OpenSSL:
 wget http://www.openssl.org/source/openssl-1.0.2p.tar.gz --no-check-certificate
 tar -zxf openssl-1.0.2p.tar.gz
 cd openssl-1.0.2p
-./Configure darwin64-x86_64-cc --prefix=/usr
+./Configure linux-x86_64 --prefix=/usr
 make
 sudo make install
 ```
