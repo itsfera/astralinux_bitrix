@@ -193,7 +193,8 @@ cd openssl-1.0.2p
 make
 sudo make install
 ```
-Модуль для чатов:
+
+Модуль для чатов (устаревший, можно пропустить, но не забыть убрать из сборки):
 ```
 wget https://github.com/wandenberg/nginx-push-stream-module/archive/0.4.1.tar.gz --no-check-certificate
 tar -zxf 0.4.1.tar.gz
@@ -304,3 +305,35 @@ return array (
 <h3>Установка 1C-Битрикс</h3>
 
 Залить в папку ```/home/bitrix/www``` скрипт ```restore.php```, запустить в браузере, "загрузить архив с дальнего сайта", восстановить БД. 
+
+<h3>Установка модуля чатов PushJS</h3>
+
+Устанавливаем nodejs ```sudo apt install -y nodejs```
+
+Устанавливаем redis ```sudo apt install redis-server```
+
+Меняем у юзера redis группу на bitrix ```usermod -g bitrix redis```
+
+Ставим права на папку c сокетом: ```chown -R redis:bitrix /var/run/redis/```
+
+Добавляем конфиг redis из данного репозитория в папку ```/etc/redis/redis.conf```, старый удаляем. 
+
+Настраиваем сервис redis в systemd ```vi /etc/systemd/system/redis.service```, прописываем
+```
+[Service]
+Group=www-data
+```
+
+Сохраняем изменения и перезапускаем
+```
+systemctl daemon-reload
+systemctl enable redis && systemctl restart redis
+```
+
+Проверяем работу redis c помощью логов в ```/var/log/redis```, а также с помощью curl:
+```
+su bitrix
+redis-cli -s /var/run/redis/redis-server.sock
+> ping
+```
+Если видим ```PONG```, то redis работает
