@@ -1,0 +1,31 @@
+{
+   "servers": [
+      {
+         "name": "sub-__PORT__",
+         "port": __PORT__,
+         "hostname": "__WS_HOST__",
+         "backlog": 1024,
+         "routes": {
+            "sub": "__SUBWSPATH__"
+         }
+      }
+   ],
+   "clusterMode": true,
+   "processUniqueId": "sub-__PORT__",
+   "storage": {
+      "type": "redis",
+      "socket": "__REDIS_SOCK__",
+      "messageTLL": 86400,
+      "channelTLL": 86400,
+      "onlineTLL": 120,
+      "onlineDelta": 10
+   },
+   "security": {
+      "key": "__SECURITY_KEY__"
+   },
+    "debug": {
+        "folderName": "/var/log/push-server",
+        "ip": [__IP_LIST__],
+        "trustProxy": true
+    }
+}
