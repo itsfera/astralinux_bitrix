@@ -1,0 +1,16 @@
+[Unit]
+Description=RTC service
+After=redis.target
+ 
+[Service]
+Type=forking
+ExecStart=/etc/init.d/push-server-multi start
+ExecStop=/etc/init.d/push-server-multi stop
+WorkingDirectory=/opt/push-server
+Restart=always
+RestartSec=30
+PrivateTmp=false
+ 
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,262 @@
+#!/bin/bash
+#
+# push-service process manager for NodeJS
+#
+# chkconfig: 345 80 20
+#
+# description: start and stop push process
+# processname: push-service
+#
+### BEGIN INIT INFO
+# Provides:          push-services
+# Required-Start: $local_fs $remote_fs
+# Required-Stop: $local_fs $remote_fs
+# Should-Start: $network
+# Should-Stop: $network
+# Default-Start:        2 3 4 5
+# Default-Stop:         0 1 6
+# Short-Description: push init script
+### END INIT INFO
+
+PROG=$(basename $0)
+CONF=/etc/default/push-server
+
+# Source function library.
+. /lib/lsb/init-functions
+
+generate_security_key(){
+  randLength=128
+  rndStr=</dev/urandom tr -dc A-Za-z0-9 | head -c $randLength
+  echo $rndStr
+}
+
+to_log(){
+    msg="$1"
+    [[ -z $msg ]] && return 1
+
+    LOGGER_NAME=push-server
+    LOGGER_LEVEL=daemon.warning
+
+    logger -t $LOGGER_NAME -ip $LOGGER_LEVEL "$msg"
+    echo "$msg"
+}
+
+[[ -f $CONF ]] && \
+  . $CONF
+
+[[ -z $HG_DIR ]]    &&  HG_DIR=/opt/push-server
+[[ -z $CFG_DIR ]]    &&  CFG_DIR=/etc/push-server
+[[ -z $VAR_DIR ]]   &&  VAR_DIR=/var/log/push-server
+[[ -z $BASE_SUB ]]  &&  BASE_SUB=801            # base for port number where sub services lives
+[[ -z $BASE_PUB ]]  &&  BASE_PUB=901            # base for port number where pub services lives
+[[ -z $TMPL_SUB ]]  &&  TMPL_SUB=push-server-sub-__PORT__.json
+[[ -z $TMPL_PUB ]]  &&  TMPL_PUB=push-server-pub-__PORT__.json
+[[ -z $USER ]]      &&  USER=bitrix
+[[ -z $ID_SUB ]]    &&  ID_SUB=2              # max ID for sub service
+[[ -z $ID_PUB ]]    &&  ID_PUB=1              # max ID for pub service
+[[ -z $IP_LIST ]]   &&  IP_LIST='"127.0.0.1"'
+[[ -z $PID_SUB ]]   &&  PID_SUB=push-server-sub-__PORT__.pid
+[[ -z $PID_PUB ]]   &&  PID_PUB=push-server-pub-__PORT__.pid
+[[ -z $WS_HOST ]]   &&  WS_HOST=127.0.0.1
+[[ -z $WS_PORT ]]   &&  WS_PORT=8895
+[[ -z $REDIS_SOCK ]] && REDIS_SOCK=/var/run/redis/redis-server.sock
+[[ -z $SUBPATH ]]   && SUBWSPATH="/bitrix/subws/"
+[[ -z $SUBWSPATH ]]   && SUBPATH="/bitrix/sub/"
+[[ -z $PUBPATH ]]   && PUBPATH="/bitrix/pub/"
+[[ -z $RESTPATH ]]   && RESTPATH="/bitrix/rest/"
+
+
+[[ ! -d $VAR_DIR ]] && mkdir -p $VAR_DIR && chown ${USER}:root $VAR_DIR
+
+# default values
+if [[ -z $SECURITY_KEY ]]; then
+    to_log "generate security key"
+    SECURITY_KEY=$(generate_security_key)
+    echo "SECURITY_KEY=$SECURITY_KEY" >> $CONF
+fi
+
+# process template
+process_template(){
+    template_name=$1
+    service_id=$2
+    service_base=$3
+
+    template_file=$CFG_DIR/$template_name
+    for service_id in `seq 0 ${service_id}`; do
+        echo -n "Update config service=$service_id -> "
+        service_port=${service_base}${service_id}
+        dest_file=$(echo "$template_file" | sed -e "s/__PORT__/$service_port/")
+        cat  $template_file | \
+         sed -e "s/__PORT__/$service_port/g;
+            s/__SECURITY_KEY__/$SECURITY_KEY/g;
+            s/__WS_HOST__/$WS_HOST/g;
+            s/__WS_PORT__/$WS_PORT/g;
+            s:__PUBPATH__:$PUBPATH:g;
+            s:__SUBPATH__:$SUBPATH:g;
+                s:__RESTPATH__:$RESTPATH:g;                
+            s:__SUBWSPATH__:$SUBWSPATH:g;
+            s:__REDIS_SOCK__:$REDIS_SOCK:g;
+            s:__IP_LIST__:$(printf "%q" $IP_LIST):g;
+         "> $dest_file
+
+        chown -R ${USER}:root $dest_file
+        echo "$dest_file"
+    done
+}
+
+# generate configs for services
+generate_config(){
+    SERVICE=${1:-all}
+
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "sub" ) ]] && \
+        process_template "$TMPL_SUB" "$ID_SUB" "$BASE_SUB"
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "pub" ) ]] && \
+        process_template "$TMPL_PUB" "$ID_PUB" "$BASE_PUB"
+}
+
+
+status_service(){
+    template_name=$1
+    service_id=$2
+    service_base=$3
+    pid_name=$4
+
+    pid_file=$VAR_DIR/$pid_name
+    service_type=$(echo $template_name | awk -F'-' '{print $3}')
+    for service_id in `seq 0 ${service_id}`; do
+        service_port=${service_base}${service_id}
+        pidf=$(echo "$pid_file" | sed -e "s/__PORT__/$service_port/")
+        echo -n "Status $service_type-$service_port -> "
+        status -p $pidf
+    done
+}
+
+status_services(){
+    SERVICE=${1:-all}
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "sub" ) ]] && \
+        status_service "$TMPL_SUB" "$ID_SUB" "$BASE_SUB" "$PID_SUB"
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "pub" ) ]] && \
+        status_service "$TMPL_PUB" "$ID_PUB" "$BASE_PUB" "$PID_PUB"
+}
+
+
+start_service(){
+    template_name=$1
+    service_id=$2
+    service_base=$3
+    pid_name=$4
+
+    template_file=$CFG_DIR/$template_name
+    pid_file=$VAR_DIR/$pid_name
+    service_type=$(echo $template_name | awk -F'-' '{print $3}')
+    for service_id in `seq 0 ${service_id}`; do
+        log_file=$VAR_DIR/$service_type-$service_port.log
+
+        service_port=${service_base}${service_id}
+        cfgf=$(echo "$template_file" | sed -e "s/__PORT__/$service_port/")
+        pidf=$(echo "$pid_file" | sed -e "s/__PORT__/$service_port/")
+
+        # debug
+        to_log "pid_file=$pid_file template_file=$template_file service_type=$service_type"
+
+        echo -n "Start $service_type-$service_port -> "
+        status -p $pidf 1>/dev/null 2>&1
+        status_rtn=$?
+        if [[ $status_rtn -eq 0 ]]; then
+            echo "is running pid=$(cat $pidf)" 
+        else
+            # start process
+            pushd $HG_DIR 1>/dev/null 2>&1
+            sudo -u $USER -H /bin/bash \
+                -c "( node server.js --config $cfgf \
+                1>$log_file 2>&1 ) &" 
+            rtn=$?
+            to_log "start rtn_code=$rtn"
+
+            if [[ -z $rtn ]]; then
+                to_log "error on start"
+            else
+                pid=$(ps -ef | grep "node server.js --config $cfgf" | \
+                    grep -v grep | awk '{print $2}')
+
+                if [[ $pid -gt 0  ]] 2>/dev/null; then
+                    to_log "OK pid=$pid pidf=$pidf"
+                    echo $pid > $pidf
+                else
+                    to_log "Error"
+                fi
+            fi
+            popd 1>/dev/null 2>&1
+        fi
+    done
+}
+
+# start services
+start_services(){
+    SERVICE=${1:-all}
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "sub" ) ]] && \
+        start_service "$TMPL_SUB" "$ID_SUB" "$BASE_SUB" "$PID_SUB"
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "pub" ) ]] && \
+        start_service "$TMPL_PUB" "$ID_PUB" "$BASE_PUB" "$PID_PUB"
+
+}
+
+stop_service(){
+    template_name=$1
+    service_id=$2
+    service_base=$3
+    pid_name=$4
+
+    template_file=$CFG_DIR/$template_name
+    pid_file=$VAR_DIR/$pid_name
+    service_type=$(echo $template_name | awk -F'-' '{print $3}')
+    for service_id in `seq 0 ${service_id}`; do
+        service_port=${service_base}${service_id}
+        pidf=$(echo "$pid_file" | sed -e "s/__PORT__/$service_port/")
+        echo -n "Stop $service_type-$service_port -> "
+        killproc -p ${pidf} 1>/dev/null 2>&1
+        kill_rtn=$?
+        if [[ $kill_rtn -gt 0 ]]; then
+            echo "Error"
+        else
+            echo "Ok"
+        fi
+    done
+}
+
+# start services
+stop_services(){
+    SERVICE=${1:-all}
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "sub" ) ]] && \
+        stop_service "$TMPL_SUB" "$ID_SUB" "$BASE_SUB" "$PID_SUB"
+
+    [[ ( "$SERVICE" == "all" ) || ( "$SERVICE" == "pub" ) ]] && \
+        stop_service "$TMPL_PUB" "$ID_PUB" "$BASE_PUB" "$PID_PUB"
+}
+
+case ${1} in
+    "update_configs") generate_config ${2} ;;
+    "start") start_services ${2} ;;
+    "status") status_services ${2} ;;
+    "stop") stop_services ${2} ;;
+    "restart") 
+        stop_services ${2}
+        start_services ${2}
+        ;;
+    "reset")
+        generate_config ${2}
+        stop_services ${2}
+        start_services ${2}
+        ;;
+    *) 
+        echo "Usage: {start|stop|update_configs|status|restart|reset} {sub|pub}"
+        exit 1
+        ;;
+esac
