@@ -321,7 +321,7 @@ return array (
 Настраиваем сервис redis в systemd ```vi /etc/systemd/system/redis.service```, прописываем
 ```
 [Service]
-Group=www-data
+Group=bitrix
 ```
 
 Сохраняем изменения и перезапускаем
@@ -337,3 +337,49 @@ redis-cli -s /var/run/redis/redis-server.sock
 > ping
 ```
 Если видим ```PONG```, то redis работает
+
+Ставим npm ```curl -L https://www.npmjs.com/install.sh | sh```
+
+Теперь настраиваем запуск push-server. Создаем скрипт запуска ```/etc/init.d/push-server-multi``` - берем из данного репозитория. 
+Размещаем конфиги push-server (все в данном репозитории). Основной конфиг ```push-server``` поместить в ```/etc/default/```, файлы шаблонов ```push-server-pub-__PORT__.json``` и ```push-server-sub-__PORT__.json``` поместить в ```/etc/push-server/```.
+
+Распаковываем дистрибутив push-server:
+```
+mkdir /opt/push-server
+sudo tar -xzf push-server.tar.gz -C /opt/push-server
+sudo chown -R bitrix:bitrix /opt/push-server
+chmod 755 `find /opt/push-server -type d`
+```
+и собираем его ```sudo npm install --production /opt/push-server/ 2>/dev/null```
+
+Добавляем push-server в сервисы systemd (копируем из репозитория) ```/lib/systemd/system/push-server.service```
+Активируем сервис
+```
+systemctl enable push-server.service
+systemctl daemon-reload
+```
+Создаем папку для логов 
+```
+mkdir /var/log/push-server
+chown -R bitrix:bitrix /var/log/push-server
+```
+Теперь пробуем инициировать модуль ```/etc/init.d/push-server-multi reset```
+Результатом должны явиться шаблоны в папке ```/etc/push-server/```, а также логи в папке ```/var/log/push-server```, без ошибок. 
+Если что-то пошло не так, нужно удалить шаблоны (кроме изначальных двух), логи и сделать ```killall node```, после устранения проблемы можно инициировать заново. 
+
+Если все хорошо, стартуем ```systemctl start push-server```.
+
+Переходим к настройке nginx. Прежде всего необходимо отключить старые конфиги чата. 
+```
+mv /etc/nginx/conf.d/push-im_settings.conf /etc/nginx/conf.d/push-im_settings.conf.bak
+mv /etc/nginx/conf.d/push.conf /etc/nginx/conf.d/push.conf.bak
+mv /etc/nginx/push-im_settings.conf /etc/nginx/push-im_settings.conf.bak
+mv /etc/nginx/push-im_subscrider.conf /etc/nginx/push-im_subscrider.conf.bak
+```
+Заливаем новые конфиги из репозитория (папка ```/etc/nginx```). В конфиге ```ssl.conf``` необходимо прописать пути к самоподписанному сертификату сервера, приватному ключу и файлу dhparam. Тестируем nginx ```nginx -t``` и если ошибок нет (может только ругаться на сертификат), то рестартуем nginx ```service nginx restart```
+
+Подключаем к битриксу. Извлекаем сгенерированный ключ безопасности ```grep SECURITY_KEY /etc/default/push-server```, он идет сразу после ```SECURITY_KEY=```
+Редактируем файл ```/home/bitrix/www/bitrix/.settings_extra.php```, заменяем из репозитория и подставляем свой ключ безопасности в ветку ```signature_key```.
+В настройках модуля Push&Pull необходимо включить поддержку Bitrix Push Server (последний радиопин).
+После этого нужно провести проверку конфигурации сайта и работы портала ```/bitrix/admin/site_checker.php?lang=ru```
+
